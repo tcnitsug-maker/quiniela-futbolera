@@ -7,9 +7,9 @@ import Dashboard from "./pages/Dashboard";
 import Quiniela from "./pages/Quiniela";
 import Ranking from "./pages/Ranking";
 import EnVivo from "./pages/EnVivo";
+import Admin from "./pages/Admin";
 import Navbar from "./components/Navbar";
 
-// Envuelve las páginas privadas con Navbar y verifica sesión
 function Privado({ children }) {
   const { usuario } = useAuth();
   if (!usuario) return <Navigate to="/" replace />;
@@ -31,6 +31,7 @@ function App() {
         <Route path="/quiniela" element={<Privado><Quiniela /></Privado>} />
         <Route path="/ranking" element={<Privado><Ranking /></Privado>} />
         <Route path="/envivo" element={<Privado><EnVivo /></Privado>} />
+        <Route path="/admin" element={<Privado><Admin /></Privado>} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </BrowserRouter>
