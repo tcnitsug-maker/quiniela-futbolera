@@ -1,5 +1,5 @@
 // Tarjeta de un partido. Si onPronostico se pasa, muestra botones L/E/V.
-function PartidoCard({ partido, seleccion, onPronostico }) {
+function PartidoCard({ partido, seleccion, onPronostico, bloqueado = false }) {
   const colorEstado = {
     pendiente: "border-blue-500",
     en_vivo: "border-red-500",
@@ -13,7 +13,7 @@ function PartidoCard({ partido, seleccion, onPronostico }) {
   ];
 
   return (
-    <div className={`bg-slate-800 rounded-xl p-4 border-l-4 ${colorEstado} shadow-lg`}>
+    <div className={`bg-slate-800 rounded-xl p-4 border-l-4 ${colorEstado} shadow-lg ${bloqueado ? "opacity-70" : ""}`}>
       <div className="flex items-center justify-between gap-2 mb-3">
         <div className="flex items-center gap-2 flex-1 min-w-0">
           {partido.logoLocal && (
@@ -32,18 +32,25 @@ function PartidoCard({ partido, seleccion, onPronostico }) {
         </div>
       </div>
 
+      {bloqueado && (
+        <div className="bg-amber-500/20 border border-amber-500 text-amber-300 text-xs rounded px-2 py-1 mb-2 text-center">
+          🔒 Pronóstico bloqueado
+        </div>
+      )}
+
       {partido.estado === "pendiente" && onPronostico && (
         <div className="grid grid-cols-3 gap-2">
           {opciones.map((o) => (
             <button
               key={o.valor}
               onClick={() => onPronostico(partido._id, o.valor)}
-              title={o.titulo}
+              disabled={bloqueado}
+              title={bloqueado ? "Este pronóstico está bloqueado" : o.titulo}
               className={`py-2 rounded-lg font-bold text-sm transition ${
                 seleccion === o.valor
                   ? "bg-blue-600 text-white ring-2 ring-blue-400"
                   : "bg-slate-700 text-slate-200 hover:bg-slate-600"
-              }`}
+              } ${bloqueado ? "opacity-50 cursor-not-allowed" : ""}`}
             >
               {o.label}
             </button>
