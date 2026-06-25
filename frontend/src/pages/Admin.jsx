@@ -8,6 +8,7 @@ function Admin() {
   const [partidos, setPartidos] = useState([]);
   const [cargando, setCargando] = useState(true);
   const [aviso, setAviso] = useState("");
+  const [golesForm, setGolesForm] = useState({});
 
   useEffect(() => {
     cargar();
@@ -24,15 +25,25 @@ function Admin() {
     }
   };
 
-  // Solo admin puede ver esta página
   if (usuario && usuario.rol !== "admin") {
     return <Navigate to="/dashboard" replace />;
   }
 
-  const guardarResultado = async (partidoId, resultado) => {
+  const guardarResultado = async (partidoId) => {
+    const { golesLocal, golesVisitante } = golesForm[partidoId] || {};
+    
+    if (golesLocal === undefined || golesVisitante === undefined) {
+      setAviso("❌ Ingresa goles en ambos campos");
+      return;
+    }
+
     try {
-      await api.put(`/partidos/${partidoId}/resultado`, { resultado });
+      await api.put(`/partidos/${partidoId}/resultado`, { 
+        golesLocal: parseInt(golesLocal), 
+        golesVisitante: parseInt(golesVisitante) 
+      });
       setAviso("✅ Resultado guardado y puntos recalculados");
+      setGolesForm({});
       cargar();
       setTimeout(() => setAviso(""), 2500);
     } catch (err) {
@@ -44,7 +55,8 @@ function Admin() {
   const limpiar = async (partidoId) => {
     try {
       await api.delete(`/partidos/${partidoId}/resultado`);
-      setAviso("Resultado eliminado");
+      setAviso("✅ Resultado eliminado");
+      setGolesForm({});
       cargar();
       setTimeout(() => setAviso(""), 2500);
     } catch (err) {
@@ -59,7 +71,7 @@ function Admin() {
     <div>
       <h1 className="text-2xl font-extrabold text-white mb-1">🛠️ Panel de Administrador</h1>
       <p className="text-slate-400 mb-6">
-        Elige el ganador de cada partido. Al guardar, los puntos se recalculan automáticamente.
+        Ingresa los goles de cada equipo. Al guardar, los puntos se recalculan automáticamente.
       </p>
 
       {aviso && (
@@ -68,57 +80,90 @@ function Admin() {
         </div>
       )}
 
-      <div className="flex flex-col gap-3">
-        {partidos.map((p) => {
-          const opciones = [
-            { valor: "1", label: `Gana ${p.local}` },
-            { valor: "X", label: "Empate" },
-            { valor: "2", label: `Gana ${p.visitante}` }
-          ];
-          return (
-            <div key={p._id} className="bg-slate-800 rounded-xl p-4 border border-slate-700">
-              <div className="flex items-center justify-between gap-2 mb-3 flex-wrap">
-                <span className="font-bold text-white">
-                  {p.casillero}. {p.local} vs {p.visitante}
+      <div className="flex flex-col gap-4">
+        {partidos.map((p) => (
+          <div key={p._id} className="bg-slate-800 rounded-xl p-4 border border-slate-700">
+            <div className="flex items-center justify-between gap-2 mb-3 flex-wrap">
+              <span className="font-bold text-white">
+                {p.casillero}. {p.local} vs {p.visitante}
+              </span>
+              {p.estado === "finalizado" ? (
+                <span className="text-xs bg-green-500/20 text-green-400 px-2 py-1 rounded-full font-bold">
+                  ✅ Finalizado · {p.golesLocal}-{p.golesVisitante}
                 </span>
-                {p.estado === "finalizado" ? (
-                  <span className="text-xs bg-green-500/20 text-green-400 px-2 py-1 rounded-full font-bold">
-                    Finalizado · Resultado: {p.resultado}
-                  </span>
-                ) : (
-                  <span className="text-xs bg-slate-700 text-slate-300 px-2 py-1 rounded-full">
-                    Pendiente
-                  </span>
-                )}
-              </div>
-
-              <div className="grid grid-cols-3 gap-2 mb-2">
-                {opciones.map((o) => (
-                  <button
-                    key={o.valor}
-                    onClick={() => guardarResultado(p._id, o.valor)}
-                    className={`py-2 rounded-lg text-sm font-bold transition ${
-                      p.resultado === o.valor
-                        ? "bg-green-600 text-white ring-2 ring-green-400"
-                        : "bg-slate-700 text-slate-200 hover:bg-slate-600"
-                    }`}
-                  >
-                    {o.label}
-                  </button>
-                ))}
-              </div>
-
-              {p.estado === "finalizado" && (
-                <button
-                  onClick={() => limpiar(p._id)}
-                  className="text-xs text-red-400 hover:underline"
-                >
-                  Borrar resultado
-                </button>
+              ) : (
+                <span className="text-xs bg-slate-700 text-slate-300 px-2 py-1 rounded-full">
+                  ⏳ Pendiente
+                </span>
               )}
             </div>
-          );
-        })}
+
+            {p.estado === "pendiente" ? (
+              <div className="flex items-end gap-2">
+                <div>
+                  <label className="text-xs text-slate-400">Goles {p.local}</label>
+                  <input
+                    type="number"
+                    min="0"
+                    value={golesForm[p._id]?.golesLocal ?? ""}
+                    onChange={(e) =>
+                      setGolesForm({
+                        ...golesForm,
+                        [p._id]: {
+                          ...golesForm[p._id],
+                          golesLocal: e.target.value
+                        }
+                      })
+                    }
+                    className="w-16 bg-slate-700 text-white rounded-lg px-2 py-1 border border-slate-600 text-center"
+                    placeholder="0"
+                  />
+                </div>
+
+                <span className="text-white font-bold">-</span>
+
+                <div>
+                  <label className="text-xs text-slate-400">Goles {p.visitante}</label>
+                  <input
+                    type="number"
+                    min="0"
+                    value={golesForm[p._id]?.golesVisitante ?? ""}
+                    onChange={(e) =>
+                      setGolesForm({
+                        ...golesForm,
+                        [p._id]: {
+                          ...golesForm[p._id],
+                          golesVisitante: e.target.value
+                        }
+                      })
+                    }
+                    className="w-16 bg-slate-700 text-white rounded-lg px-2 py-1 border border-slate-600 text-center"
+                    placeholder="0"
+                  />
+                </div>
+
+                <button
+                  onClick={() => guardarResultado(p._id)}
+                  className="bg-blue-600 hover:bg-blue-700 text-white font-bold px-4 py-1 rounded-lg transition"
+                >
+                  Guardar
+                </button>
+              </div>
+            ) : (
+              <div>
+                <p className="text-slate-300 mb-2">
+                  Resultado: <span className="font-bold text-green-400">{p.golesLocal}-{p.golesVisitante}</span>
+                </p>
+                <button
+                  onClick={() => limpiar(p._id)}
+                  className="text-sm text-red-400 hover:text-red-300 font-bold"
+                >
+                  🗑️ Borrar resultado
+                </button>
+              </div>
+            )}
+          </div>
+        ))}
       </div>
     </div>
   );
